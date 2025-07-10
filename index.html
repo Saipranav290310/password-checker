@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Advanced Password Strength Checker</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: #000;
+      color: #fff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .container {
+      background: #111;
+      padding: 30px 25px;
+      border-radius: 16px;
+      width: 100%;
+      max-width: 450px;
+      text-align: center;
+      box-shadow: 0 10px 25px rgba(255, 255, 255, 0.1);
+    }
+    h2 {
+      color: #facc15;
+      margin-bottom: 15px;
+    }
+    input[type="password"], input[type="text"] {
+      width: 100%;
+      padding: 12px;
+      font-size: 16px;
+      border-radius: 8px;
+      border: 2px solid #444;
+      background: #000;
+      color: #fff;
+      margin-top: 10px;
+      margin-bottom: 10px;
+      outline: none;
+    }
+    .strength-bar {
+      height: 10px;
+      border-radius: 6px;
+      background: #333;
+      overflow: hidden;
+      margin-bottom: 5px;
+    }
+    .strength-fill {
+      height: 100%;
+      width: 0%;
+      transition: width 0.3s;
+    }
+    .info-line {
+      font-size: 13px;
+      color: #aaa;
+      margin-bottom: 8px;
+    }
+    .common-warning {
+      background: #ff1f1f;
+      color: #fff;
+      padding: 8px;
+      font-size: 14px;
+      border-radius: 8px;
+      margin-top: 10px;
+      display: none;
+    }
+    .suggestions {
+      font-size: 13px;
+      color: #99f;
+      margin-top: 10px;
+    }
+    .icon {
+      width: 50px;
+      height: 50px;
+      margin-bottom: 10px;
+    }
+    .toggle-box {
+      text-align: right;
+      margin-top: -5px;
+      margin-bottom: 10px;
+    }
+    .toggle-box label {
+      font-size: 13px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <img src="https://cdn-icons-png.flaticon.com/512/3064/3064197.png" alt="lock" class="icon">
+    <h2>Password Strength Checker</h2>
+    <input type="password" id="password" placeholder="🔐 Type your password">
+    <div class="toggle-box">
+      <label><input type="checkbox" id="togglePassword"> Show Password</label>
+    </div>
+
+    <div class="strength-bar">
+      <div class="strength-fill" id="strength-fill"></div>
+    </div>
+
+    <div class="info-line" id="strength-percent">Strength: 0%</div>
+    <div class="info-line" id="crack-chance">Crack Chance: —</div>
+    <div class="info-line" id="crack-risk">Risk of Cracking: —%</div>
+
+    <div class="common-warning" id="common-warning">
+      ⚠️ Common or predictable password detected!
+    </div>
+
+    <div class="suggestions" id="suggestions"></div>
+  </div>
+
+  <script>
+    const passwordInput = document.getElementById("password");
+    const strengthFill = document.getElementById("strength-fill");
+    const strengthPercent = document.getElementById("strength-percent");
+    const crackChance = document.getElementById("crack-chance");
+    const crackRisk = document.getElementById("crack-risk");
+    const warningBox = document.getElementById("common-warning");
+    const togglePassword = document.getElementById("togglePassword");
+    const suggestions = document.getElementById("suggestions");
+
+    const commonPatterns = [
+      "123", "1234", "12345", "123456", "12345678", "123456789", "1234567890",
+      "password", "pass123", "admin", "admin123", "qwerty", "abc", "abc123",
+      "test", "welcome", "letmein", "user", "login", "root", "iloveyou", "love",
+      "god", "freedom", "starwars"
+    ];
+
+    const years = [];
+    for (let y = 1980; y <= 2026; y++) years.push(y.toString());
+
+    togglePassword.addEventListener("change", () => {
+      passwordInput.type = togglePassword.checked ? "text" : "password";
+    });
+
+    function getCrackDetails(score, isCommon) {
+      if (isCommon) return { label: "💥 Instantly Crackable", risk: "99.9" };
+      const chances = [
+        { label: "💀 Very Easy", risk: "95" },
+        { label: "⚠️ Easy", risk: "75" },
+        { label: "😐 Medium", risk: "50" },
+        { label: "🧠 Hard", risk: "20" },
+        { label: "🔒 Very Hard", risk: "1" }
+      ];
+      return chances[Math.max(0, Math.min(score - 1, 4))];
+    }
+
+    passwordInput.addEventListener("input", () => {
+      const password = passwordInput.value;
+      const lowerPass = password.toLowerCase();
+
+      const hasUpper = /[A-Z]/.test(password);
+      const hasLower = /[a-z]/.test(password);
+      const hasNumber = /[0-9]/.test(password);
+      const hasSymbol = /[^A-Za-z0-9]/.test(password);
+      const isLong = password.length >= 8;
+
+      let score = 0;
+      if (isLong) score++;
+      if (hasUpper) score++;
+      if (hasLower) score++;
+      if (hasNumber) score++;
+      if (hasSymbol) score++;
+
+      const patternMatch = commonPatterns.some(p => lowerPass.includes(p));
+      const yearMatch = years.some(y => password.includes(y));
+      const isCommon = patternMatch || yearMatch;
+
+      warningBox.style.display = isCommon ? "block" : "none";
+
+      const percent = score * 20;
+      const { label, risk } = getCrackDetails(score, isCommon);
+
+      strengthFill.style.width = percent + "%";
+      strengthFill.style.backgroundColor = score >= 4 ? (score === 5 ? "#22c55e" : "#facc15") : "#ff1f1f";
+
+      strengthPercent.textContent = "Strength: " + percent + "%";
+      crackChance.textContent = "Crack Chance: " + label;
+      crackRisk.textContent = "Risk of Cracking: " + risk + "%";
+
+      const suggestList = [];
+      if (!isLong) suggestList.push("Use at least 8 characters");
+      if (!hasUpper) suggestList.push("Add UPPERCASE letters");
+      if (!hasLower) suggestList.push("Add lowercase letters");
+      if (!hasNumber) suggestList.push("Include numbers");
+      if (!hasSymbol) suggestList.push("Use symbols (!, @, #...)");
+
+      suggestions.innerHTML = suggestList.length ? "🔧 Suggestions:<br>• " + suggestList.join("<br>• ") : "";
+    });
+  </script>
+
+</body>
+</html>
